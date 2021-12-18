@@ -34,16 +34,18 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 
+
 class RequestTypeEnum(Enum):
     GET_REQUEST = 1
     POST_REQUEST = 2
+
 
 @dataclass
 class ZpoolCapacity:
     ZpoolName: str
     ZpoolAvailableBytes: int
     TotalUsedBytesForAllDatasets: int
-  
+
 
 class Startup(object):
 
@@ -59,11 +61,11 @@ class Startup(object):
         self._wfree = zpool_warn
         self._cfree = zpool_critical
         self._show_zpool_perfdata = show_zpool_perfdata
- 
+
         http_request_header = 'https' if use_ssl else 'http'
- 
-        self._base_url = ('%s://%s/api/v2.0' % (http_request_header, hostname) )
-        
+
+        self._base_url = ('%s://%s/api/v2.0' % (http_request_header, hostname))
+
         self.setup_logging()
         self.log_startup_information()
 
@@ -77,7 +79,7 @@ class Startup(object):
         logging.debug('wfree: %d', self._wfree)
         logging.debug('cfree: %d', self._cfree)
         logging.debug('')
- 
+
 
     # Do a GET or POST request
     def do_request(self, resource, requestType, optionalPayload):
@@ -85,67 +87,67 @@ class Startup(object):
             request_url = '%s/%s/' % (self._base_url, resource)
             logging.debug('request_url: %s', request_url)
             logging.debug('requestType: ' + repr(requestType))
-            #logging.debug('optionalPayloadAsJson:' + optionalPayloadAsJson)
+            # logging.debug('optionalPayloadAsJson:' + optionalPayloadAsJson)
 
-            # We assume that all incoming payloads are JSON. 
+            # We assume that all incoming payloads are JSON.
             optionalPayloadAsJson = json.dumps(optionalPayload)
             logging.debug('optionalPayloadAsJson:' + optionalPayloadAsJson)
-            
+
             # We get annoying warning text output from the urllib3 library if we fail to do this
             if (not self._verify_cert):
                 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            auth=False
-            headers={}
+            auth = False
+            headers = {}
 
             # If username provided, try to authenticate with username/password combo
-            if (self._user): 
-                auth=(self._user, self._secret)
+            if (self._user):
+                auth = (self._user, self._secret)
             # Otherwise, use API key
-            else: 
-                headers={'Authorization': 'Bearer ' + self._secret}
-            
+            else:
+                headers = {'Authorization': 'Bearer ' + self._secret}
+
             # GET Request
             if (requestType is RequestTypeEnum.GET_REQUEST):
                 if (optionalPayload):
-                    r = requests.get(request_url, 
+                    r = requests.get(request_url,
                                     auth=auth,
                                     headers=headers,
                                     data=optionalPayloadAsJson,
                                     verify=self._verify_cert)
                 else:
-                    r = requests.get(request_url, 
+                    r = requests.get(request_url,
                                     auth=auth,
                                     headers=headers,
-                                    verify=self._verify_cert)                    
+                                    verify=self._verify_cert)
                 logging.debug('GET request response: %s', r.text)
-            # POST Request                
+            # POST Request
             elif (requestType is RequestTypeEnum.POST_REQUEST):
-                if (optionalPayload):                
-                    r = requests.post(request_url, 
+                if (optionalPayload):
+                    r = requests.post(request_url,
                                     auth=auth,
                                     headers=headers,
                                     data=optionalPayloadAsJson,
                                     verify=self._verify_cert)
                 else:
-                    r = requests.post(request_url, 
+                    r = requests.post(request_url,
                                     auth=auth,
                                     headers=headers,
                                     verify=self._verify_cert)
                 logging.debug('POST request response: %s', r.text)
             else:
-                print ('UNKNOWN - request failed - Unknown RequestType: ' + requestType)
+                print('UNKNOWN - request failed - Unknown RequestType: ' + requestType)
                 sys.exit(3)
 
             r.raise_for_status()
         except:
-            print ('UNKNOWN - request failed - Error when contacting TrueNAS server: ' + str(sys.exc_info()) )
+            print('UNKNOWN - request failed - Error when contacting TrueNAS server: ' + str(sys.exc_info()) )
             sys.exit(3)
- 
+
         if r.ok:
             try:
                 return r.json()
             except:
-                print ('UNKNOWN - json failed to parse - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
+                print('UNKNOWN - json failed to parse - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
                 sys.exit(3)
 
     # GET request
@@ -166,7 +168,7 @@ class Startup(object):
 
     def check_repl(self):
         repls = self.get_request('replication')
-        errors=0
+        errors = 0
         msg=''
         replications_examined = ''
 
@@ -181,29 +183,29 @@ class Startup(object):
                 logging.debug('Replication state code: %s', repl_state_code)
 
                 replications_examined = replications_examined + ' ' + repl_name + ': ' + repl_state_code
-                
+
                 repl_was_not_success = (repl_state_code != 'FINISHED')
                 repl_not_running = (repl_state_code != 'RUNNING')
                 if (repl_was_not_success and repl_not_running):
                     errors = errors + 1
                     msg = msg + repl_name + ': ' + repl_state_code
         except:
-            print ('UNKNOWN - check_repl() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
+            print('UNKNOWN - check_repl() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
             sys.exit(3)
- 
+
         if errors > 0:
-            print ('WARNING - There are ' + str(errors) + ' replication errors [' + msg.strip() + ']. Go to Storage > Replication Tasks > View Replication Tasks in TrueNAS for more details.')
+            print('WARNING - There are ' + str(errors) + ' replication errors [' + msg.strip() + ']. Go to Storage > Replication Tasks > View Replication Tasks in TrueNAS for more details.')
             sys.exit(1)
         else:
-            print ('OK - No replication errors. Replications examined: ' + replications_examined)
+            print('OK - No replication errors. Replications examined: ' + replications_examined)
             sys.exit(0)
 
 
     def check_update(self):
         updateCheckResult = self.post_request('update/check_available')
-        warnings=0
-        errors=0
-        msg=''
+        warnings = 0
+        errors = 0
+        msg = ''
         needsUpdateOrOtherPossibleIssue=False
         updateCheckResultString=''
 
@@ -217,39 +219,39 @@ class Startup(object):
 
         try:
             logging.debug('Update check result: %s', updateCheckResult)
-            
+
             updateCheckResultString = updateCheckResult['status']
             # Despite that it sounds error-y, 'UNAVAILABLE' is actually the normal everything-is-ok state.
             needsUpdateOrOtherPossibleIssue = (updateCheckResultString != 'UNAVAILABLE')
 
         except:
-            print ('UNKNOWN - check_update() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
+            print('UNKNOWN - check_update() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
             sys.exit(3)
- 
+
         if needsUpdateOrOtherPossibleIssue:
             if (updateCheckResultString in updateCheckResultDict):
-                print ('WARNING - Update Status: ' + updateCheckResultString + ' (' + updateCheckResultDict[updateCheckResultString] + '). Update may be required. Go to TrueNAS Dashboard -> System -> Update to check for newer version.')
-            # Unfamiliar status we've never seen before    
+                print('WARNING - Update Status: ' + updateCheckResultString + ' (' + updateCheckResultDict[updateCheckResultString] + '). Update may be required. Go to TrueNAS Dashboard -> System -> Update to check for newer version.')
+            # Unfamiliar status we've never seen before
             else:
-                print ('WARNING - Unknown Update Status: ' + updateCheckResultString + '. Update may be required. Go to TrueNAS Dashboard -> System -> Update to check for newer version.')
+                print('WARNING - Unknown Update Status: ' + updateCheckResultString + '. Update may be required. Go to TrueNAS Dashboard -> System -> Update to check for newer version.')
             sys.exit(1)
         else:
-            print ('OK - Update Status: ' + updateCheckResultString + ' (' + updateCheckResultDict[updateCheckResultString] + ')')
+            print('OK - Update Status: ' + updateCheckResultString + ' (' + updateCheckResultDict[updateCheckResultString] + ')')
             sys.exit(0)
 
 
     def check_alerts(self):
         alerts = self.get_request('alert/list')
-        
+
         logging.debug('alerts: %s', alerts)
-        
-        warn=0
-        crit=0
+
+        warn = 0
+        crit = 0
         critical_messages = ''
         warning_messages = ''
         try:
             for alert in alerts:
-                # Skip over dismissed alerts if that's what user requested 
+                # Skip over dismissed alerts if that's what user requested
                 if (self._ignore_dismissed_alerts and alert['dismissed'] == True):
                     continue
                 if alert['level'] == 'CRITICAL':
@@ -259,46 +261,46 @@ class Startup(object):
                     warn = warn + 1
                     warning_messages = warning_messages + '- (W) ' + alert['formatted'].replace('\n', '. ') + ' '
         except:
-            print ('UNKNOWN - check_alerts() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
+            print('UNKNOWN - check_alerts() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
             sys.exit(3)
-        
+
         if crit > 0:
             # Show critical errors before any warnings
             print ('CRITICAL ' + critical_messages + warning_messages)
             sys.exit(2)
         elif warn > 0:
-            print ('WARNING ' + warning_messages)
+            print('WARNING ' + warning_messages)
             sys.exit(1)
         else:
-            print ('OK - No problem alerts')
+            print('OK - No problem alerts')
             sys.exit(0)
- 
+
     def check_zpool(self):
         pool_results = self.get_request('pool')
 
-        #logging.debug('pool_results: %s', pool_results)
-        
-        warn=0
-        crit=0
+        # logging.debug('pool_results: %s', pool_results)
+
+        warn = 0
+        crit = 0
         critical_messages = ''
         warning_messages = ''
         zpools_examined = ''
         actual_zpool_count = 0
         all_pool_names = ''
-        
+
         looking_for_all_pools = self._zpool_name.lower() == 'all'
-        
+
         try:
             for pool in pool_results:
 
                 actual_zpool_count += 1
                 pool_name = pool['name']
                 pool_status = pool['status']
-                
+
                 all_pool_names += pool_name + ' '
-                
+
                 logging.debug('Checking zpool for relevancy: %s with status %s', pool_name, pool_status)
-                
+
                 # Either match all pools, or only the requested pool
                 if (looking_for_all_pools or self._zpool_name == pool_name):
                     logging.debug('Relevant Zpool found: %s with status %s', pool_name, pool_status)
@@ -308,13 +310,13 @@ class Startup(object):
                         crit = crit + 1
                         critical_messages = critical_messages + '- (C) ZPool ' + pool_name + 'is ' + pool_status
         except:
-            print ('UNKNOWN - check_zpool() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
+            print('UNKNOWN - check_zpool() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
             sys.exit(3)
-        
+
         # There were no Zpools on the system, and we were looking for all of them
         if (zpools_examined == '' and actual_zpool_count == 0 and looking_for_all_pools):
             zpools_examined = '(None - No Zpools found)'
-            
+
         # There were no Zpools matching a specific name on the system
         if (zpools_examined == '' and actual_zpool_count > 0 and not looking_for_all_pools and crit == 0):
             crit = crit + 1
@@ -322,25 +324,24 @@ class Startup(object):
 
         if crit > 0:
             # Show critical errors before any warnings
-            print ('CRITICAL ' + critical_messages + warning_messages)
+            print('CRITICAL ' + critical_messages + warning_messages)
             sys.exit(2)
         elif warn > 0:
-            print ('WARNING ' + warning_messages)
+            print('WARNING ' + warning_messages)
             sys.exit(1)
         else:
-            print ('OK - No problem Zpools. Zpools examined: ' + zpools_examined)
+            print('OK - No problem Zpools. Zpools examined: ' + zpools_examined)
             sys.exit(0)
 
-    
 
     def check_zpool_capacity(self):
         # As far as I can tell, we unfortunately have to look at the datasets to get a usable
-        # capacity value. There are numbers on a pool's output, but I can't make sense of them - 
+        # capacity value. There are numbers on a pool's output, but I can't make sense of them -
         # when added up and made into percentages, they are very off (10-20%) for complex multiply
         # vdev'd zpools, and don't agree with the TrueNAS GUI.
 
         # Instead, this dataset call gives us a hierarchical view of datasets, rather than the default flattened view. This means
-        # we can just look at root-level datasets coming back from this request, and then add up their used 
+        # we can just look at root-level datasets coming back from this request, and then add up their used
         # capacity for a given zpool. This total will be the real used total for the Zpool. Again, this is
         # circuitous and complicated, and I am only doing it because I think it's the only way with the current
         # API. If you know better, please let me know!
@@ -361,12 +362,12 @@ class Startup(object):
                     'flat': False
                 }
             },
-             'query-filters': []   
-        }     
+            'query-filters': []
+        }
         dataset_results = self.get_request_with_payload('pool/dataset', datasetPayload)
 
-        warn=0
-        crit=0
+        warn = 0
+        crit = 0
         critical_messages = ''
         warning_messages = ''
         zpools_examined_with_no_issues = ''
@@ -375,25 +376,25 @@ class Startup(object):
         all_root_level_dataset_names = ''
         perfdata = ''
         if (self._show_zpool_perfdata):
-            perfdata= ';|'
-        
+            perfdata = ';|'
+
         # We allow filtering on pool name here
         looking_for_all_pools = self._zpool_name.lower() == 'all'
 
         # Build a dict / array thingy and add to it as we proceed...
         zpoolNameToCapacityDict = {}
-        
+
         try:
             # Go through all the datasets, and sum up values for the zpools we are interested in
             for dataset in dataset_results:
                 root_level_dataset_count += 1
                 dataset_name = dataset['name']
                 dataset_pool_name = dataset['pool']
-                
+
                 all_root_level_dataset_names += dataset_name + ' '
-                
+
                 logging.debug('Checking root-level dataset for relevancy: dataset %s from pool %s', dataset_name, dataset_pool_name)
-                
+
                 # Either match all datasets, from any pool, or only datasets from the requested pool
                 if (looking_for_all_pools or self._zpool_name == dataset_pool_name):
                     logging.debug('Relevant root-level dataset found: dataset %s from pool %s', dataset_name, dataset_pool_name)
@@ -418,21 +419,20 @@ class Startup(object):
                         zpoolNameToCapacityDict[dataset_pool_name].TotalUsedBytesForAllDatasets += dataset_used_bytes
                     logging.debug('currentZpoolCapacity: ' + str(zpoolNameToCapacityDict[dataset_pool_name]))
 
-
-            # So now we have summary data on all the Zpools we care about. Go through each of them 
+            # So now we have summary data on all the Zpools we care about. Go through each of them
             # and see if any are above warning/critical percentages.
             for currentZpoolCapacity in zpoolNameToCapacityDict.values():
                 zpoolTotalBytes = currentZpoolCapacity.ZpoolAvailableBytes + currentZpoolCapacity.TotalUsedBytesForAllDatasets
-                usedPercentage = (currentZpoolCapacity.TotalUsedBytesForAllDatasets / zpoolTotalBytes ) * 100;
+                usedPercentage = (currentZpoolCapacity.TotalUsedBytesForAllDatasets / zpoolTotalBytes) * 100;
                 usagePercentDisplayString = f'{usedPercentage:3.1f}'
-                
-                logging.debug('Warning capacity: ' + str(warnZpoolCapacityPercent) + '%' + ' Critical capacity: ' + str(critZpoolCapacityPercent) + '%')                 
-                logging.debug('ZPool ' + str(currentZpoolCapacity.ZpoolName) + ' usedPercentage: ' + usagePercentDisplayString + '%')  
-                
+
+                logging.debug('Warning capacity: ' + str(warnZpoolCapacityPercent) + '%' + ' Critical capacity: ' + str(critZpoolCapacityPercent) + '%')
+                logging.debug('ZPool ' + str(currentZpoolCapacity.ZpoolName) + ' usedPercentage: ' + usagePercentDisplayString + '%')
+
                 # Add warning/critical errors for the current ZPool summary being checked, if needed
                 if (usedPercentage >= critZpoolCapacityPercent):
                     crit += 1
-                    critical_messages += " - Pool " + currentZpoolCapacity.ZpoolName + " usage " + usagePercentDisplayString + "% exceeds critical value of " + str(critZpoolCapacityPercent) + "%"                        
+                    critical_messages += " - Pool " + currentZpoolCapacity.ZpoolName + " usage " + usagePercentDisplayString + "% exceeds critical value of " + str(critZpoolCapacityPercent) + "%"
                 elif (usedPercentage >= warnZpoolCapacityPercent):
                     warn += 1
                     warning_messages += " - Pool " + currentZpoolCapacity.ZpoolName + " usage " + usagePercentDisplayString + "% exceeds warning value of " + str(warnZpoolCapacityPercent) + "%"
@@ -440,12 +440,12 @@ class Startup(object):
                     # Don't add dashes to start, only to additions
                     if (len(zpools_examined_with_no_issues) > 0):
                         zpools_examined_with_no_issues += ' - '
-                    zpools_examined_with_no_issues += currentZpoolCapacity.ZpoolName + ' (' + usagePercentDisplayString + '% used)'                    
+                    zpools_examined_with_no_issues += currentZpoolCapacity.ZpoolName + ' (' + usagePercentDisplayString + '% used)'
 
                 # Add perfdata if user requested it
                 if (self._show_zpool_perfdata):
                     usedMegaBytes = currentZpoolCapacity.TotalUsedBytesForAllDatasets / BYTES_IN_MEGABYTE
-                    usedMegabytesString = f'{usedMegaBytes:3.2f}'                    
+                    usedMegabytesString = f'{usedMegaBytes:3.2f}'
 
                     warningBytes = zpoolTotalBytes * (warnZpoolCapacityPercent / 100)
                     warningMegabytes = warningBytes / BYTES_IN_MEGABYTE
@@ -456,23 +456,23 @@ class Startup(object):
                     criticalMegabytesString = f'{criticalMegabytes:3.2f}'
 
                     totalMegabytes = zpoolTotalBytes / BYTES_IN_MEGABYTE
-                    totalMegabytesString = f'{totalMegabytes:3.2f}' 
+                    totalMegabytesString = f'{totalMegabytes:3.2f}'
 
-                    logging.debug('usedMegabytesString: ' + usedMegabytesString)  
-                    logging.debug('warningMegabytesString: ' + warningMegabytesString)  
-                    logging.debug('criticalMegabytesString: ' + criticalMegabytesString)                      
-                    logging.debug('totalMegabytesString: ' + totalMegabytesString)  
+                    logging.debug('usedMegabytesString: ' + usedMegabytesString)
+                    logging.debug('warningMegabytesString: ' + warningMegabytesString)
+                    logging.debug('criticalMegabytesString: ' + criticalMegabytesString)
+                    logging.debug('totalMegabytesString: ' + totalMegabytesString)
 
-                    perfdata += " " + currentZpoolCapacity.ZpoolName + "=" + usedMegabytesString + "MB;" + warningMegabytesString + ";" + criticalMegabytesString + ";0;" + totalMegabytesString                                
+                    perfdata += " " + currentZpoolCapacity.ZpoolName + "=" + usedMegabytesString + "MB;" + warningMegabytesString + ";" + criticalMegabytesString + ";0;" + totalMegabytesString
 
         except:
-            print ('UNKNOWN - check_zpool() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
+            print('UNKNOWN - check_zpool() - Error when contacting TrueNAS server: ' + str(sys.exc_info()))
             sys.exit(3)
-        
+
         # There were no datasets on the system, and we were looking for datasets from any pool
         if (root_level_datasets_examined == '' and root_level_dataset_count == 0 and looking_for_all_pools):
             root_level_datasets_examined = '(No Datasets found)'
-            
+
         # There were no datasets matching the requested specific pool name on the system
         if (root_level_datasets_examined == '' and root_level_dataset_count > 0 and not looking_for_all_pools and crit == 0):
             crit = crit + 1
@@ -487,13 +487,13 @@ class Startup(object):
 
         if crit > 0:
             # Show critical errors before any warnings
-            print ('CRITICAL' + critical_messages + warning_messages + error_or_warning_dividing_dash + zpools_examined_with_no_issues + perfdata)
+            print('CRITICAL' + critical_messages + warning_messages + error_or_warning_dividing_dash + zpools_examined_with_no_issues + perfdata)
             sys.exit(2)
         elif warn > 0:
-            print ('WARNING' + warning_messages + error_or_warning_dividing_dash + zpools_examined_with_no_issues + perfdata)
+            print('WARNING' + warning_messages + error_or_warning_dividing_dash + zpools_examined_with_no_issues + perfdata)
             sys.exit(1)
         else:
-            print ('OK - No Zpool capacity issues. ZPools examined: ' + zpools_examined_with_no_issues + ' - Root level datasets examined:' + root_level_datasets_examined + perfdata)
+            print('OK - No Zpool capacity issues. ZPools examined: ' + zpools_examined_with_no_issues + ' - Root level datasets examined:' + root_level_datasets_examined + perfdata)
             sys.exit(0)
 
 
@@ -510,23 +510,25 @@ class Startup(object):
         elif alert_type == 'zpool_capacity':
             self.check_zpool_capacity()
         else:
-            print ("Unknown type: " + alert_type)
+            print("Unknown type: " + alert_type)
             sys.exit(3)
 
     def setup_logging(self):
         logger = logging.getLogger()
-        
+
         if (self._debug_logging):
-            #print('Trying to set logging level debug')
+            # print('Trying to set logging level debug')
             logger.setLevel(logging.DEBUG)
         else:
-            #print('Should be setting no logging level at all')
+            # print('Should be setting no logging level at all')
             logger.setLevel(logging.CRITICAL)
+
 
 check_truenas_script_version = '1.4'
 
 default_zpool_warning_percent = 80
 default_zool_critical_percent = 90
+
 
 def main():
     # Build parser for arguments
@@ -540,25 +542,26 @@ def main():
     parser.add_argument('-nv', '--no-verify-cert', required=False, action='store_true', help='Do not verify the server SSL cert; default is to verify the SSL cert')
     parser.add_argument('-ig', '--ignore-dismissed-alerts', required=False, action='store_true', help='Ignore alerts that have already been dismissed in FreeNas/TrueNAS; default is to treat them as relevant')
     parser.add_argument('-d', '--debug', required=False, action='store_true', help='Display debugging information; run script this way and record result when asking for help.')
-    parser.add_argument('-zw', '--zpool-warn', required=False, type=int, default=default_zpool_warning_percent, help='ZPool warning storage capacity free threshold. Give a percent value in the range 1-100, defaults to ' + str(default_zpool_warning_percent) + '%%. Used with zpool_capacity check.')    
-    parser.add_argument('-zc', '--zpool-critical', required=False, type=int, default=default_zool_critical_percent, help='ZPool critical storage capacity free threshold. Give a percent value in the range 1-100, defaults to ' + str(default_zool_critical_percent) +'%%. Used with zpool_capacity check.')
-    parser.add_argument('-zp', '--zpool-perfdata', required=False, action='store_true', help='Add Zpool capacity perf data to output. Used with zpool_capacity check.')    
-    
+    parser.add_argument('-zw', '--zpool-warn', required=False, type=int, default=default_zpool_warning_percent, help='ZPool warning storage capacity free threshold. Give a percent value in the range 1-100, defaults to ' + str(default_zpool_warning_percent) + '%%. Used with zpool_capacity check.')
+    parser.add_argument('-zc', '--zpool-critical', required=False, type=int, default=default_zool_critical_percent, help='ZPool critical storage capacity free threshold. Give a percent value in the range 1-100, defaults to ' + str(default_zool_critical_percent) + '%%. Used with zpool_capacity check.')
+    parser.add_argument('-zp', '--zpool-perfdata', required=False, action='store_true', help='Add Zpool capacity perf data to output. Used with zpool_capacity check.')
+
     # if no arguments, print out help
-    if len(sys.argv)==1:
+    if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
- 
+
     # Parse the arguments
     args = parser.parse_args(sys.argv[1:])
 
     use_ssl = not args.no_ssl
     verify_ssl_cert = not args.no_verify_cert
- 
+
     startup = Startup(args.hostname, args.user, args.passwd, use_ssl, verify_ssl_cert, args.ignore_dismissed_alerts, args.debug, args.zpoolname, args.zpool_warn, args.zpool_critical, args.zpool_perfdata)
- 
+
     startup.handle_requested_alert_type(args.type)
- 
+
+
 if __name__ == '__main__':
     main()
-    
+
