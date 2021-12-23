@@ -275,6 +275,22 @@ class Startup(object):
             print('OK - No problem alerts')
             sys.exit(0)
 
+    def check_zfs_snapshot(self):
+        snapshots = self.get_request('zfs/snapshot')
+        #print(type(snapshots))
+        snapshots2 = [snap for snap in snapshots if "audiobook" in snap["id"]]
+        latest_snap = snapshots2[0]["id"]
+        print(latest_snap)
+        date_latest_snap = (latest_snap[-16:len(latest_snap) - 6])
+        #date_latest_snap = latest_snap.lstrip("pool02/ds02/audiobooks@auto-")#[0:14])
+        print(date_latest_snap)
+
+        #print(snapshots2[0]["id"])
+        #for snap in snapshots2:
+        #    print(snap["id"])
+            #print(snap["id"] + " " + snap["properties"]["creation"]["value"])
+
+
     def check_zpool(self):
         pool_results = self.get_request('pool')
 
@@ -501,6 +517,8 @@ class Startup(object):
     def handle_requested_alert_type(self, alert_type):
         if alert_type == 'alerts':
             self.check_alerts()
+        if alert_type == 'snapshots':
+            self.check_zfs_snapshot()
         elif alert_type == 'repl':
             self.check_repl()
         elif alert_type == 'update':
@@ -536,7 +554,7 @@ def main():
     parser.add_argument('-H', '--hostname', required=True, type=str, help='Hostname or IP address')
     parser.add_argument('-u', '--user', required=False, type=str, help='Username, only root works, if not specified: use API Key')
     parser.add_argument('-p', '--passwd', required=True, type=str, help='Password or API Key')
-    parser.add_argument('-t', '--type', required=True, type=str, help='Type of check, either alerts, zpool, zpool_capacity, repl, or update')
+    parser.add_argument('-t', '--type', required=True, type=str, help='Type of check, either alerts, snapshots, zpool, zpool_capacity, repl, or update')
     parser.add_argument('-pn', '--zpoolname', required=False, type=str, default='all', help='For check type zpool, the name of zpool to check. Optional; defaults to all zpools.')
     parser.add_argument('-ns', '--no-ssl', required=False, action='store_true', help='Disable SSL (use HTTP); default is to use SSL (use HTTPS)')
     parser.add_argument('-nv', '--no-verify-cert', required=False, action='store_true', help='Do not verify the server SSL cert; default is to verify the SSL cert')
