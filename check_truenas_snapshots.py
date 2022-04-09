@@ -8,7 +8,11 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime
+from wakeonlan import send_magic_packet
 
+
+# append path to avoid ModuleNotFound errors during import
+sys.path.append('S:/1.Aleks/Coding/python/check_truenas_extended_play')
 
 # @dataclass
 # class SnapShot:
@@ -148,16 +152,15 @@ class Startup(object):
 
         snapshot_date_list = []
         for snap in snapshots2:
+            #  example how to select data: snap_creation = snap["properties"]["creation"]["value"]
             snap_id = snap["id"]
-            snap_creation = snap["properties"]["creation"]["value"]
+
             #snap_id = snap_id.replace("_", "-")
             #str.replace('; ', ', ') and then a str.split(', ')
             snap_creation_date_str = snap_id[-16:len(snap_id) - 6]  #  snap_id.split("auto-")
             snap_creation_date_object = datetime.strptime(snap_creation_date_str, "%Y-%m-%d")
 
             #snap_creation_list = [snap_id for snap_id in snap_creation_list]
-            #print(snap_creation_list)
-            #print(sorted(snap_creation_list))
             #snap_creation_list.sort(key=lambda snap_id: snap_id[0])
             #TODO have to just get the dates, strip name + time then sort the sjizzle
             #my_dates.sort(key=lambda date: datetime.strptime(date, "%d-%b-%y"))
@@ -167,11 +170,25 @@ class Startup(object):
             #print(f"{snap_id} was created on: {snap_creation}")
         snapshot_date_list.sort()
         print(snapshot_date_list)
-        latest_snap = snapshot_date_list[-1].strftime("%Y-%m-%d")  #["id"]
+        latest_snap = snapshot_date_list[-1]  #.strftime("%Y-%m-%d")  #["id"]
+        print(type(latest_snap))
+
         print(f"the latest snapshot is {latest_snap}")
+        date_now = datetime.now()#.strftime("%Y-%m-%d")
+        print(type(date_now))
+        #b = datetime(date_now)
+        delta = date_now - latest_snap
+        #print(delta.days)
+        #print(days)
+        print(f"there are {delta.days} days between today and the oldest snap")
         #date_latest_snap = (latest_snap[-16:len(latest_snap) - 6])
         ##date_latest_snap = latest_snap.lstrip("pool02/ds02/audiobooks@auto-")#[0:14])
         #print(date_latest_snap)
+        if delta.days > 48:
+            send_magic_packet('44:8a:5b:ca:6d:50')
+            #TODO send message to telegram informing that yoda was woken
+        else:
+            print("The snapshot is recent enough")
 
     def handle_requested_alert_type(self, alert_type):
         if alert_type == 'alerts':
