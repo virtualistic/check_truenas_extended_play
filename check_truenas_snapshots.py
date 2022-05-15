@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime
 from wakeonlan import send_magic_packet
+import telegram_send
 
 
 # append path to avoid ModuleNotFound errors during import
@@ -186,8 +187,9 @@ class Startup(object):
         #print(date_latest_snap)
         if delta.days > 48:
             send_magic_packet('44:8a:5b:ca:6d:50')
-            #TODO send message to telegram informing that yoda was woken
+            telegram_send.send(messages=[f"Send WoL packet to yoda because movie snapshot is {delta.days} old"])
         else:
+            telegram_send.send(messages=[f"yoda movie snapshot is recent enough: {delta.days} days"])
             print("The snapshot is recent enough")
 
     def handle_requested_alert_type(self, alert_type):
